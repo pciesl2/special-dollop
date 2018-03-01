@@ -82,9 +82,4 @@ int main (int argc, char **argv)
        printf ("%c", m1.arr[i][j]);
      printf("\n");
     }
-
-  /* 
-  stack st1
-  
-
 }
