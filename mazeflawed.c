@@ -35,32 +35,51 @@ list init ()
   return s;
 }
 
-void insertAtFront (node** hd, int x, int y)
+/* the head of the list is encased in the struct list */
+void insertAtFront3 ( list* lptr, int x, int y)
 {
  node* ptr = (node*) malloc (sizeof(node));
  ptr->xpos = x;
  ptr->ypos = y;
- ptr->next = *hd;       
- *hd = ptr;      
+ ptr->next = lptr->head;   /* access the "head" field from */
+ lptr->head = ptr;         /*   the structure pointer      */
 }
 
-void removeFromFront (node** hd)
+void removeFromFront (list* lptr)
 {
- node* ptr = *hd;
+ node* ptr = lptr->head;
 
  if (ptr != NULL)
    {
-    *hd = ptr->next;
+    lptr->head = ptr->next;
     free (ptr);
    }
 }
 
+void showRR(node* hd)
+{
+ if ( hd != NULL )
+ {
+ showRR ( hd->next);
+ printf ("(%d, %d) ", hd->xpos, hd->ypos);
+ }
+}
+
+int getx (list* lptr)
+{
+  return lptr->head->xpos; 
+}
+
+int gety (list* lptr)
+{
+  return lptr->head->ypos; 
+}
+
 int main (int argc, char **argv){
   maze m1, mpos;
-  node* head = NULL;
   list s1 = init();
   
-  int xpos, ypos;
+  int xpos, ypos, x, y;
   int i,j;
 
   FILE *src;
@@ -141,5 +160,45 @@ int main (int argc, char **argv){
        printf ("%c", m1.arr[i][j]);
      printf("\n");
     }
+
   
+  
+  insertAtFront3 (&s1, m1.xstart, m1.ystart);
+  m1.arr2[m1.xstart][m1.ystart] = TRUE;
+  x = m1.xstart;
+  y = m1.ystart;
+  while(s1.head != NULL)
+  {
+    x = s1.head->xpos;
+    y = s1.head->ypos;
+    if(getx(&s1)==m1.xend & gety(&s1)==m1.yend)
+    {
+      showRR(s1.head);
+      printf("\n");
+      return 0;
+    }
+    else if(m1.arr2[x+1][y] == FALSE)
+    {
+      insertAtFront3 (&s1, x+1, y);
+      m1.arr2[x+1][y] = TRUE;
+    }
+     else if(m1.arr2[x][y+1] == FALSE)
+    {
+      insertAtFront3 (&s1, x, y+1);
+      m1.arr2[x][y+1] = TRUE;
+    }
+    else if(m1.arr2[x][y-1] == FALSE)
+    {
+      insertAtFront3 (&s1, x, y-1);
+      m1.arr2[x][y-1] = TRUE;
+    }
+    else if(m1.arr2[x-1][y] == FALSE)
+    {
+      insertAtFront3 (&s1, x-1, y);
+      m1.arr2[x-1][y] = TRUE;
+    }
+    else{
+      removeFromFront(&s1);
+    }
+  }
 }
