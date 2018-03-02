@@ -36,8 +36,10 @@ list init ()
 }
 
 /* the head of the list is encased in the struct list */
-void insertAtFront3 ( list* lptr, int x, int y)
+void insertAtFront3 ( list* lptr, int x, int y, int debug)
 {
+ if(debug)
+  printf ("push (%d, %d) \n", x, y);
  node* ptr = (node*) malloc (sizeof(node));
  ptr->xpos = x;
  ptr->ypos = y;
@@ -45,15 +47,23 @@ void insertAtFront3 ( list* lptr, int x, int y)
  lptr->head = ptr;         /*   the structure pointer      */
 }
 
-void removeFromFront (list* lptr)
+void removeFromFront (list* lptr, int debug)
 {
  node* ptr = lptr->head;
+ if(debug)
+  printf ("pop (%d, %d) \n", ptr->xpos, ptr->ypos);
 
  if (ptr != NULL)
    {
     lptr->head = ptr->next;
     free (ptr);
    }
+}
+
+void clearstack (list* lptr)
+{
+  while(lptr->head != NULL)
+    removeFromFront(lptr, 0);
 }
 
 void showRR(node* hd)
@@ -63,6 +73,11 @@ void showRR(node* hd)
  showRR ( hd->next);
  printf ("(%d, %d) ", hd->xpos, hd->ypos);
  }
+}
+
+node* top(list* lptr)
+{
+  return lptr->head;
 }
 
 int getx (list* lptr)
@@ -79,17 +94,24 @@ int main (int argc, char **argv){
   maze m1, mpos;
   list s1 = init();
   
+  int debug = FALSE;
   int xpos, ypos, x, y;
   int i,j;
 
   FILE *src;
 
-  /* verify the proper number of command line arguments were given */
-  if(argc != 2) {
+  /* verify the proper number of command line arguments were given*/
+  if(argc > 3) {
      printf("Usage: %s <input file name>\n", argv[0]);
      exit(-1);
   }
-   
+  if(argc == 3)
+    if(argv[2][0] == '-' && argv[2][1] == 'd' )
+    {
+      printf("\nDebuging information\n");
+      debug = TRUE;
+    }
+        
   /* Try to open the input file. */
   if ( ( src = fopen( argv[1], "r" )) == NULL )
   {
@@ -100,10 +122,24 @@ int main (int argc, char **argv){
   /* read in the size, starting and ending positions in the maze */
   fscanf (src, "%d %d", &m1.xsize, &m1.ysize);
   if(m1.xsize <= 0 || m1.ysize <= 0) // maze size is not 1 or more
+  {
+    fprintf( stderr, "row or column cannot be 0\n");
     exit(-1);
+  }   
   fscanf (src, "%d %d", &m1.xstart, &m1.ystart);
+  if(m1.xsize < m1.xstart || m1.ysize < m1.ystart)
+  {
+    fprintf( stderr, "invalid start position\n");
+    exit(-1);
+  }  
   fscanf (src, "%d %d", &m1.xend, &m1.yend);
+  if(m1.xsize < m1.xend || m1.ysize < m1.yend)
+  {
+    fprintf( stderr, "invalid end position\n");
+    exit(-1);
+  }  
   /* print them out to verify the input */
+  
   printf ("size: %d, %d\n", m1.xsize, m1.ysize);
   printf ("start: %d, %d\n", m1.xstart, m1.ystart);
   printf ("end: %d, %d\n", m1.xend, m1.yend);
@@ -141,6 +177,11 @@ int main (int argc, char **argv){
   /* mark the blocked positions in the maze with *'s */
   while (fscanf (src, "%d %d", &xpos, &ypos) != EOF)
     {
+     if(xpos>m1.xsize || ypos>m1.ysize)
+      fprintf( stderr, "invalid block position position @ (%d, %d) \n", xpos, ypos);
+     else if(xpos==m1.xstart & ypos==m1.ystart)
+      fprintf( stderr, "invalid block position position @ (%d, %d) cannot block start \n", xpos, ypos);
+    else
      m1.arr[xpos][ypos] = '*';
     }
   /* mark blocked positions/borders as visted */
@@ -160,10 +201,8 @@ int main (int argc, char **argv){
        printf ("%c", m1.arr[i][j]);
      printf("\n");
     }
-
   
-  
-  insertAtFront3 (&s1, m1.xstart, m1.ystart);
+  insertAtFront3 (&s1, m1.xstart, m1.ystart, debug);
   m1.arr2[m1.xstart][m1.ystart] = TRUE;
   x = m1.xstart;
   y = m1.ystart;
@@ -175,30 +214,46 @@ int main (int argc, char **argv){
     {
       showRR(s1.head);
       printf("\n");
+      clearstack (&s1);
+      for (i = 0; i < m1.xsize+2; i++)
+      {
+        free(m1.arr[i]);
+        free(m1.arr2[i]);
+      }
+      free(m1.arr);
+      free(m1.arr2);
       return 0;
     }
     else if(m1.arr2[x+1][y] == FALSE)
     {
-      insertAtFront3 (&s1, x+1, y);
+      insertAtFront3 (&s1, x+1, y, debug);
       m1.arr2[x+1][y] = TRUE;
     }
      else if(m1.arr2[x][y+1] == FALSE)
     {
-      insertAtFront3 (&s1, x, y+1);
+      insertAtFront3 (&s1, x, y+1, debug);
       m1.arr2[x][y+1] = TRUE;
     }
     else if(m1.arr2[x][y-1] == FALSE)
     {
-      insertAtFront3 (&s1, x, y-1);
+      insertAtFront3 (&s1, x, y-1, debug);
       m1.arr2[x][y-1] = TRUE;
     }
     else if(m1.arr2[x-1][y] == FALSE)
     {
-      insertAtFront3 (&s1, x-1, y);
+      insertAtFront3 (&s1, x-1, y, debug);
       m1.arr2[x-1][y] = TRUE;
     }
     else{
-      removeFromFront(&s1);
+      removeFromFront(&s1, debug);
     }
   }
+  printf("Maze has no solution\n");
+  for (i = 0; i < m1.xsize+2; i++)
+  {
+    free(m1.arr[i]);
+    free(m1.arr2[i]);
+  }
+  free(m1.arr);
+  free(m1.arr2);
 }
